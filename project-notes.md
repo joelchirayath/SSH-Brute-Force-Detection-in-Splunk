@@ -15,3 +15,12 @@ Understand how SSH brute-force and password spraying attacks generate Linux auth
 - Identify repeated failed logins from one IP
 - Identify one IP targeting many usernames
 - Detect successful logins after multiple failures
+
+## Phase 2 - Lab Validation
+
+### step 2.1 - Identify Ubuntu IP (target)
+command used:
+	ip a
+### step 2.2 - Verify SSH Service
+command used:
+	sudo systemctl status ssh
