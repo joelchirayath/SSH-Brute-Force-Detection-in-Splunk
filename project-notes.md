@@ -24,3 +24,12 @@ command used:
 ### step 2.2 - Verify SSH Service
 command used:
 	sudo systemctl status ssh
+### step 2.3 - verify Kali (attacker) to Ubuntu connectivity
+command used:
+	ip -c 5 <UBUNTU-IP>
+### Step 2.4 - Validate SSH Port Reachability
+Command used:
+	nc -zv <UBUNTU-IP> 22
+### Step 2.5 - Generate Failed SSH Authentication Event
+Command used:
+	ssh fakeuser@<UBUNTU-IP>
