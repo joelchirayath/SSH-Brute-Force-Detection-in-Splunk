@@ -160,3 +160,25 @@ index=main sshd "Failed password"
 | where count >= 3
 | sort - _time
 ```
+
+## Phase 4 - Attack Simulation for Detection Tuning
+
+### Step 4.1 - Validate Hydra Availability on Kali
+Command used:
+```bash
+hydra -h | head
+```
+### Step 4.2 - Create Controlled SSH Password Wordlist
+Created file:
+```text
+wordlists/ssh-passwords.txt
+```
+### Step 4.3 - Simulate Repeated Failed SSH Logins with Hydra
+Purpose:
+- Generate repeated failed SSH login attempts against the Ubuntu target
+- Produce brute-force-style authentication telemetry for Splunk detection tuning
+Command used:
+```bash
+hydra -l fakeuser -P wordlists/ssh-passwords.txt -t 2 -V ssh://<TARGET-IP>
+```
+
