@@ -230,3 +230,17 @@ index=main sshd "Failed password"
 | stats dc(target_user) as unique_users values(target_user) as users count by src_ip
 | sort - unique_users
 ```
+
+### Step 4.8 - Simulate Successful SSH Login After Failed Attempts
+Purpose:
+- Generate a success-after-failures authentication sequence
+- Failed password attempts for a valid account
+- Accepted password event
+- Successful SSH session creation
+Commands used:
+```bash
+hydra -l <VALID-USER> -P wordlists/ssh-passwords.txt -t 2 -V ssh://<TARGET-IP>
+
+ssh ubuntu@<TARGET-IP>
+```
+
