@@ -181,4 +181,8 @@ Command used:
 ```bash
 hydra -l fakeuser -P wordlists/ssh-passwords.txt -t 2 -V ssh://<TARGET-IP>
 ```
-
+### Step 4.5 - Create Multi-Username SSH Test List
+Created file:
+```text
+wordlists/ssh-users.txt
+```
