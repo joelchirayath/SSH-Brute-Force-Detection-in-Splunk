@@ -181,6 +181,25 @@ Command used:
 ```bash
 hydra -l fakeuser -P wordlists/ssh-passwords.txt -t 2 -V ssh://<TARGET-IP>
 ```
+
+### Step 4.4 - Validate Hydra-Generated SSH Failure Telemetry in Splunk
+Validation searches:
+```spl
+index=main sshd "Failed password" "fakeuser"
+
+index=main sshd "Failed password" "fakeuser"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| stats count by src_ip
+| sort - count
+
+index=main sshd "Failed password" "fakeuser"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| bucket _time span=5m
+| stats count by _time, src_ip
+| where count >= 3
+| sort - _time
+```
+
 ### Step 4.5 - Create Multi-Username SSH Test List
 Created file:
 ```text
