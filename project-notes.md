@@ -213,3 +213,20 @@ Command used:
 hydra -L wordlists/ssh-users.txt -p password -t 2 -V ssh://<TARGET-IP>
 ```
 
+### Step 4.7 - Validate Multi-Username SSH Attack Telemetry in Splunk
+
+Validation searches:
+```spl
+index=main sshd "Failed password"
+
+index=main sshd "Failed password"
+| rex "for (invalid user )?(?<target_user>\w+)"
+| stats count by target_user
+| sort - count
+
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| rex "for (invalid user )?(?<target_user>\w+)"
+| stats dc(target_user) as unique_users values(target_user) as users count by src_ip
+| sort - unique_users
+```
