@@ -33,3 +33,9 @@ Command used:
 ### Step 2.5 - Generate Failed SSH Authentication Event
 Command used:
 	ssh fakeuser@<UBUNTU-IP>
+### step 2.6 - sample auth log events
+Observed issue:
+- Raw `tail -n 20` output contained unrelated system noise (CRON, sudo, desktop events)
+- Pivoted to filtered SSH-specific log review
+commands used:
+	sudo grep sshd /var/log/auth.log | tail -n 30
