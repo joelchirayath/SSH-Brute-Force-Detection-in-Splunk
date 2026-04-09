@@ -20,22 +20,143 @@ Understand how SSH brute-force and password spraying attacks generate Linux auth
 
 ### step 2.1 - Identify Ubuntu IP (target)
 command used:
-	ip a
+```bash
+ip a
+```
+
 ### step 2.2 - Verify SSH Service
 command used:
-	sudo systemctl status ssh
+```bash
+sudo systemctl status ssh
+```
+
 ### step 2.3 - verify Kali (attacker) to Ubuntu connectivity
 command used:
-	ip -c 5 <UBUNTU-IP>
+```bash
+ip -c 5 <UBUNTU-IP>
+```
+
 ### Step 2.4 - Validate SSH Port Reachability
 Command used:
-	nc -zv <UBUNTU-IP> 22
+```bash
+nc -zv <UBUNTU-IP> 22
+```
+
 ### Step 2.5 - Generate Failed SSH Authentication Event
 Command used:
-	ssh fakeuser@<UBUNTU-IP>
+```bash
+ssh fakeuser@<UBUNTU-IP>
+```
+
 ### step 2.6 - sample auth log events
 Observed issue:
 - Raw `tail -n 20` output contained unrelated system noise (CRON, sudo, desktop events)
 - Pivoted to filtered SSH-specific log review
 commands used:
-	sudo grep sshd /var/log/auth.log | tail -n 30
+```bash
+sudo grep sshd /var/log/auth.log | tail -n 30
+```
+
+## Phase 3 - Splunk Installation and Log Ingestion
+
+### Step 3.1 - Validate Ubuntu Resources
+Commands used:
+```bash
+free -h
+df -h
+nproc
+```
+
+### Step 3.2 - Download Splunk Enterprise
+Source:
+- Splunk Enterprise Linux (.deb) package
+Purpose:
+- Install Splunk locally on the Ubuntu target to ingest `/var/log/auth.log`
+
+### Step 3.3 - Install Splunk Enterprise
+Commands used:
+```bash
+cd ~/Downloads
+sudo dpkg -i splunk-*.deb
+```
+If dependency error occured run the following:
+```bash
+sudo apt --fix-broken install -y
+sudo dpkg -i splunk-*.deb
+```
+Verification:
+```bash
+ls /opt/splunk
+```
+### Step 3.4 - Initial Splunk Startup
+Command used:
+```bash
+sudo /opt/splunk/bin/splunk start --run-as-root --accept-license
+```
+Result:
+- Splunk started successfully
+- Local administrator account created
+- Credentials stored privately (not committed to GitHub)
+
+### Step 3.5 - Access Splunk Web Interface
+Access URL:
+```text
+http://localhost:8000
+```
+
+### Step 3.6 - Ingest Linux Authentication Logs into Splunk
+Data source monitored:
+```text
+/var/log/auth.log
+```
+We now have:
+- attacker activity
+- Linux auth logs
+- Splunk ingestion
+- searchable security telemetry
+That’s a proper detection engineering pipeline.
+
+### Step 3.7 - Verify Log Ingestion in Splunk
+Initial validation searches:
+```spl
+index=main sshd
+```
+Alternative searches used:
+```spl
+index=main sourcetype=linux_secure
+index=main "/var/log/auth.log"
+```
+
+### Step 3.8 - Build First Detection Search
+Detection goal:
+- Identify failed SSH authentication attempts
+- Captures brute-force and invalid-user authentication failures
+- Forms the baseline for future threshold-based detections
+SPL query:
+```spl
+index=main sshd "Failed password"
+```
+
+### Step 3.9 - Build Brute-Force Hunting Query
+Detection goal:
+- Identify source IPs responsible for repeated failed SSH authentication attempts
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| stats count by src_ip
+| sort - count
+```
+
+### Step 3.10 - Build Threshold-Based Brute-Force Detection
+Detection goal:
+- Identify source IPs generating multiple failed SSH logins within a short time window
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| bucket _time span=5m
+| stats count by _time, src_ip
+| where count >= 3
+| sort - _time
+```
