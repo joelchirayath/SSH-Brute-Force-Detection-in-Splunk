@@ -21,3 +21,22 @@ index=main sshd "Failed password"
 | stats dc(target_user) as unique_users values(target_user) as users count by src_ip
 | sort - unique_users
 ```
+
+### Step 4.9 - Validate Success After Failures Pattern in Splunk
+
+Validation searches:
+```spl
+index=main sshd "Accepted password"
+
+index=main sshd ("Failed password" OR "Accepted password")
+
+index=main sshd ("Failed password" OR "Accepted password")
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| rex "for (invalid user )?(?<user>\w+)"
+| table _time, src_ip, user, _raw
+| sort _time
+```
+Result:
+-Successful SSH login confirmed after multiple failed attempts
+-Full authentication timeline visible in Splunk
+
