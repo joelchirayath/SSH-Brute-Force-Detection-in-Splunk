@@ -244,3 +244,69 @@ hydra -l <VALID-USER> -P wordlists/ssh-passwords.txt -t 2 -V ssh://<TARGET-IP>
 ssh ubuntu@<TARGET-IP>
 ```
 
+## Phase 5 - Detection Engineering
+
+In this phase, raw Splunk searches are refined into structured, reusable detection logic suitable for alerting and security monitoring.
+
+Focus areas:
+- Threshold-based brute-force detection
+- Attacker source identification
+- Username enumeration detection
+- Success-after-failure detection patterns
+
+### Step 5.1 - Brute-Force Detection (Threshold-Based)
+Detection goal:
+- Identify source IPs generating repeated failed SSH login attempts within a short time window
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| bucket _time span=5m
+| stats count as failed_attempts by _time, src_ip
+| where failed_attempts >= 5
+| sort - failed_attempts
+```
+
+### Step 5.2 - Identify Top Attacking IPs
+Detection goal:
+- Identify which source IPs generate the most failed SSH login attempts
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| stats count as failed_attempts by src_ip
+| sort - failed_attempts
+```
+
+### Step 5.3 - Detect Username Enumeration
+
+Detection goal:
+- Identify source IPs attempting login across multiple usernames
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| rex "for (invalid user )?(?<target_user>\w+)"
+| stats dc(target_user) as unique_users values(target_user) as targeted_users count as total_attempts by src_ip
+| where unique_users >= 5
+| sort - unique_users
+```
+
+### Step 5.4 - Detect Success After Multiple Failures
+
+Detection goal:
+- Identify successful SSH logins preceded by multiple failed attempts
+
+SPL query:
+```spl
+index=main sshd ("Failed password" OR "Accepted password")
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| rex "for (invalid user )?(?<user>\w+)"
+| sort 0 _time
+| streamstats count(eval(searchmatch("Failed password"))) as fail_count by src_ip, user
+| where searchmatch("Accepted password") AND fail_count >= 3
+```
+## Observation:
+- A separate successful login with fail_count = 0 was observed (normal behavior)
+- Detection logic correctly ignored non-suspicious logins
+
