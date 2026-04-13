@@ -310,3 +310,58 @@ index=main sshd ("Failed password" OR "Accepted password")
 - A separate successful login with fail_count = 0 was observed (normal behavior)
 - Detection logic correctly ignored non-suspicious logins
 
+## Phase 6 - Dashboards and Visualization
+
+### Step 6.1 - Create Splunk Dashboard
+Created dashboard:
+- Name: SSH Brute Force Detection Dashboard
+Purpose:
+- Visualize SSH attack patterns
+- Present detection results in an analyst-friendly format
+
+### Step 6.2 - Failed SSH Attempts Over Time Panel
+## Purpose:
+- Visualize SSH brute-force activity over time
+- Identify spikes corresponding to attack simulations
+## Visualization:
+- Line chart showing failed login attempts per minute
+SPL query:
+```spl
+index=main sshd "Failed password"
+| timechart span=1m count as failed_attempts
+```
+
+### Step 6.3 - Top Attacking IPs Panel
+- Identify most active attacking source IPs
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| stats count as failed_attempts by src_ip
+| sort - failed_attempts
+```
+
+### Step 6.4 - Top Targeted Usernames Panel
+- Identify which usernames are most frequently targeted
+SPL query:
+```spl
+index=main sshd "Failed password"
+| rex "for (invalid user )?(?<target_user>\w+)"
+| stats count as attempts by target_user
+| sort - attempts
+```
+
+### Step 6.5 - Success After Failures Panel
+- Detect successful SSH logins following multiple failed attempts
+SPL query:
+```spl
+index=main sshd ("Failed password" OR "Accepted password")
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| rex "for (invalid user )?(?<user>\w+)"
+| sort 0 _time
+| streamstats count(eval(searchmatch("Failed password"))) as fail_count by src_ip, user
+| where searchmatch("Accepted password") AND fail_count >= 3
+| table _time, src_ip, user, fail_count
+```
+
+
